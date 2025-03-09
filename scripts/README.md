@@ -1,0 +1,1 @@
+these orchestrate end-to-end processes, sourcing from scripts inside `src/` and data inside `data/`
