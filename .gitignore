@@ -51,6 +51,7 @@ mlruns/
 tensorboard/
 
 # Environment and dependency files
+.env
 *.conda
 Pipfile
 Pipfile.lock
