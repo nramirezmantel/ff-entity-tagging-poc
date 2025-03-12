@@ -4,15 +4,24 @@ This directory contains scripts for training, evaluating, and running inference 
 
 ## Overview
 
-These scripts orchestrate end-to-end processes for entity tagging, sourcing from scripts inside `src/` and data inside `data/`. Each script is designed to be run independently and includes command-line arguments for flexibility.
+These scripts orchestrate end-to-end processes for entity tagging, sourcing from scripts inside `src/` at times and data inside `data/`. Each script is designed to be run independently and includes command-line arguments for flexibility.
 
 ## Scripts
 
 ### Data Preparation
 
-- **pre_process_data.py**: Processes and cleans JSON files containing entity data.
+- **ocr_extract.py**: Converts PDF, DOCX, and XLSX files to TXT using OCR.
   ```
-  python scripts/pre_process_data.py --input <input_dir> --output <output_dir> --remove <keys_to_remove>
+  python scripts/ocr_extract.py --input <input_dir> --output <output_dir>
+  ```
+
+- **llm_tag.py**: Processes TXT files with LLM to extract entities and cleans the extracted entity JSON files.
+  ```
+  python scripts/llm_tag.py --input <input_dir> --all
+  ```
+  or for more control:
+  ```
+  python scripts/llm_tag.py --input <input_dir> --llm --llm-output <llm_output_dir> --clean --clean-output <clean_output_dir> --remove <keys_to_remove>
   ```
 
 - **feature_engineer_train.py**: Processes raw text and entity data to create training and test datasets.
@@ -60,7 +69,11 @@ These scripts orchestrate end-to-end processes for entity tagging, sourcing from
 
 1. Process raw data:
    ```
-   python scripts/pre_process_data.py --input data/raw/entities --output data/processed/entities
+   # Step 1: OCR extraction
+   python scripts/ocr_extract.py --input data/raw/files --output data/processed/ocr_output
+   
+   # Step 2: LLM entity extraction and cleaning
+   python scripts/llm_tag.py --input data/processed/ocr_output --all
    ```
 
 2. Create training and test datasets:
