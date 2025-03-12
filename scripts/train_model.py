@@ -1,41 +1,28 @@
 """
-Actually trains the spaCy model
+Trains a spaCy NER model using provided data
 """
 import pickle
 import spacy
 import argparse
-import os
 import subprocess
+from pathlib import Path
+from typing import Any, Dict, List, Tuple, Optional
 from spacy.tokens import DocBin
 
 
-def load_data(file_path):
-    """
-    Load data from a pickle file
-    
-    Args:
-        file_path (str): Path to the pickle file
-        
-    Returns:
-        list: The loaded data
-    """
+def load_data(file_path: str) -> List[Tuple[str, Dict[str, List[Tuple[int, int, str]]]]]:
+    """Load data from a pickle file"""
     with open(file_path, "rb") as f:
         return pickle.load(f)
 
 
-def convert_to_spacy_format(data, output_path, model_name="en_core_web_sm", verbose=False):
-    """
-    Convert data to spaCy binary format
-    
-    Args:
-        data (list): List of (text, annotations) tuples
-        output_path (str): Path to save the spaCy binary file
-        model_name (str): Name of the spaCy model to use
-        verbose (bool): Whether to print verbose output
-        
-    Returns:
-        None
-    """
+def convert_to_spacy_format(
+    data: List[Tuple[str, Dict[str, List[Tuple[int, int, str]]]]], 
+    output_path: str, 
+    model_name: str = "en_core_web_sm", 
+    verbose: bool = False
+) -> None:
+    """Convert data to spaCy binary format"""
     db = DocBin()
     nlp = spacy.load(model_name)
     
@@ -57,26 +44,15 @@ def convert_to_spacy_format(data, output_path, model_name="en_core_web_sm", verb
             db.add(doc)
     
     # Create directory if it doesn't exist
-    os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     db.to_disk(output_path)
     print(f"Saved spaCy binary file to {output_path}")
 
 
-def train_model(config_path, train_path, valid_path, output_dir):
-    """
-    Train a spaCy model using the provided config and data
-    
-    Args:
-        config_path (str): Path to the spaCy config file
-        train_path (str): Path to the training data in spaCy binary format
-        valid_path (str): Path to the validation data in spaCy binary format
-        output_dir (str): Directory to save the trained model
-        
-    Returns:
-        int: Return code from the training process
-    """
+def train_model(config_path: str, train_path: str, valid_path: str, output_dir: str) -> int:
+    """Train a spaCy model using the provided config and data"""
     # Create output directory if it doesn't exist
-    os.makedirs(output_dir, exist_ok=True)
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
     
     # Build the command
     cmd = [
@@ -91,11 +67,10 @@ def train_model(config_path, train_path, valid_path, output_dir):
     
     # Run the command
     process = subprocess.run(cmd)
-    
     return process.returncode
 
 
-def main():
+def main() -> None:
     """Main function to run the script"""
     parser = argparse.ArgumentParser(description="Train a spaCy NER model")
     parser.add_argument("--train", default="TRAIN-ic-mrc-arc-large-batch.pkl", 

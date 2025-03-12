@@ -1,177 +1,170 @@
 """
-Feature engineering for training data
-Processes raw text and entity data to create training and test datasets
+Feature engineering for training data: Processes raw text and entity data to create datasets
 """
-import os
 import json
 import random
 import pickle
 import argparse
+import re
+from pathlib import Path
+from typing import Dict, List, Tuple, Any, Optional, Union
+
+# Type aliases for better readability
+EntityPattern = Dict[str, str]
+TrainingExample = Tuple[str, Dict[str, List[Tuple[int, int, str]]]]
 
 
-def read_raw_docs(root_folder, extensions=['.txt'], verbose=False):
-    """
-    Reads files recursively from a root folder.
-    
-    Args:
-        root_folder (str): The root folder to start searching.
-        extensions (list): Optional list of file extensions to filter (e.g., ['.txt', '.md']).
-        verbose (bool): Whether to print verbose output
-        
-    Returns:
-        str: Combined corpus from all files
-    """
+def read_raw_docs(
+    root_folder: Union[str, Path], 
+    extensions: List[str] = ['.txt'], 
+    verbose: bool = False
+) -> str:
+    """Reads files recursively from a root folder and combines their content"""
+    root_path = Path(root_folder)
     corpus = ''
-    for dirpath, _, filenames in os.walk(root_folder):
-        if verbose:
-            print(dirpath)
-        for filename in filenames:
+    
+    for file_path in root_path.rglob('*'):
+        if not file_path.is_file():
+            continue
+            
+        if extensions is None or any(file_path.suffix.lower() == ext.lower() for ext in extensions):
             if verbose:
-                print(filename)
-            if extensions is None or any(filename.endswith(ext) for ext in extensions):
-                file_path = os.path.join(dirpath, filename)
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as file:
-                        if verbose:
-                            print(f"Reading {file_path}")
-                        corpus += file.read()
-                except Exception as e:
-                    print(f"Error reading {file_path}: {e}")
+                print(f"Reading {file_path}")
+                
+            try:
+                corpus += file_path.read_text(encoding='utf-8')
+            except Exception as e:
+                print(f"Error reading {file_path}: {e}")
+                
     return corpus
 
 
-def read_json_docs(root_folder, extensions=[".json"], verbose=False):
-    """
-    Reads JSON files recursively from a root folder and merges their contents into a single dictionary,
-    extending list values for shared keys.
-    
-    Args:
-        root_folder (str): The root folder to start searching.
-        extensions (list): Optional list of file extensions to filter (default: ['.json']).
-        verbose (bool): Whether to print verbose output
-        
-    Returns:
-        dict: A dictionary containing the merged content of all JSON files.
-    """
+def read_json_docs(
+    root_folder: Union[str, Path], 
+    extensions: List[str] = [".json"], 
+    verbose: bool = False
+) -> Dict[str, List[Any]]:
+    """Reads JSON files recursively and merges their contents into a single dictionary"""
     if extensions is None:
         raise ValueError("No file extension provided. Can't read.")
 
-    merged_dict = {}
-    for dirpath, _, filenames in os.walk(root_folder):
-        if verbose:
-            print(dirpath)
-        for filename in filenames:
-            if any(filename.endswith(ext) for ext in extensions):
-                file_path = os.path.join(dirpath, filename)
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as file:
-                        if "_cleaned.json" in file_path:
-                            if verbose:
-                                print(f"Reading {file_path}")
-                            file_content = json.load(file)
-                            if not isinstance(file_content, dict) or not all(isinstance(v, list) for v in file_content.values()):
-                                raise ValueError(f"Expected a dictionary with list values in {file_path}.")
-                            for key, new_value in file_content.items():
-                                if key in merged_dict:
-                                    if verbose:
-                                        print(f"extending {key} with {new_value}")
-                                    merged_dict[key].extend(new_value)  # Extend the list
-                                    if verbose:
-                                        print(f"merged_dict[key] new: {merged_dict[key]}")
-                                else:
-                                    if verbose:
-                                        print(f"initialising: {key}")
-                                    merged_dict[key] = new_value  # Add new key-value pair if it doesn't exist
-                except Exception as e:
-                    print(f"Error reading {file_path}: {e}")
+    root_path = Path(root_folder)
+    merged_dict: Dict[str, List[Any]] = {}
+    
+    for file_path in root_path.rglob('*'):
+        if not file_path.is_file():
+            continue
+            
+        if any(file_path.suffix.lower() == ext.lower() for ext in extensions):
+            if "_cleaned.json" not in str(file_path):
+                continue
+                
+            try:
+                if verbose:
+                    print(f"Reading {file_path}")
+                    
+                file_content = json.loads(file_path.read_text(encoding='utf-8'))
+                
+                if not isinstance(file_content, dict) or not all(isinstance(v, list) for v in file_content.values()):
+                    raise ValueError(f"Expected a dictionary with list values in {file_path}.")
+                    
+                for key, new_value in file_content.items():
+                    if key in merged_dict:
+                        if verbose:
+                            print(f"extending {key} with {new_value}")
+                        merged_dict[key].extend(new_value)
+                        if verbose:
+                            print(f"merged_dict[key] new: {merged_dict[key]}")
+                    else:
+                        if verbose:
+                            print(f"initialising: {key}")
+                        merged_dict[key] = new_value
+                        
+            except Exception as e:
+                print(f"Error reading {file_path}: {e}")
+                
     return merged_dict
 
 
-def divide_string_into_n_chunks(input_string, num_chunks):
-    """
-    Divides a string into `num_chunks` chunks and stores them in a dictionary.
-
-    Args:
-        input_string (str): The string to be divided.
-        num_chunks (int): The number of chunks.
-        
-    Returns:
-        dict: A dictionary where the keys are indices, and the values are string chunks.
-    """
-    # Calculate the chunk size (integer division)
+def divide_string_into_n_chunks(input_string: str, num_chunks: int) -> Dict[int, str]:
+    """Divides a string into `num_chunks` chunks and stores them in a dictionary"""
     chunk_size = len(input_string) // num_chunks
     remainder = len(input_string) % num_chunks
     
-    # Dictionary to store chunks
-    chunks_dict = {}
+    chunks_dict: Dict[int, str] = {}
     start_index = 0
 
     for i in range(num_chunks):
-        # Calculate the end index for the current chunk
-        end_index = start_index + chunk_size + (1 if i < remainder else 0)  # Distribute remainder evenly
+        end_index = start_index + chunk_size + (1 if i < remainder else 0)
         chunks_dict[i] = input_string[start_index:end_index]
-        start_index = end_index  # Update start index for next chunk
+        start_index = end_index
     
     return chunks_dict
 
 
-def create_entity_patterns(entities):
-    """
-    Create entity patterns for spaCy NER training
-    
-    Args:
-        entities (dict): Dictionary of entity categories and their values
-        
-    Returns:
-        list: List of entity patterns
-    """
-    ent_patterns_list = []
-    for ent_category, ent_list in entities.items():
-        for ent in ent_list:
-            # gets rid of empty entities
-            if ent != '':
-                ent_patterns_list.append(
-                    {"label": ent_category, "pattern": ent}
-                )
-    return ent_patterns_list
+def create_entity_patterns(entities: Dict[str, List[str]]) -> List[EntityPattern]:
+    """Create entity patterns for spaCy NER training"""
+    return [
+        {"label": ent_category, "pattern": ent}
+        for ent_category, ent_list in entities.items()
+        for ent in ent_list
+        if ent != ''
+    ]
 
 
-def count_entity_categories(data):
-    """
-    Count entity categories in the dataset
-    
-    Args:
-        data (list): List of (text, annotations) tuples
-        
-    Returns:
-        dict: Dictionary of entity categories and their counts
-    """
-    result_dict = {}
+def count_entity_categories(data: List[TrainingExample]) -> Dict[str, int]:
+    """Count entity categories in the dataset"""
+    result_dict: Dict[str, int] = {}
     for _, annotations in data:
         for annot in annotations['entities']:
             ent_category = annot[2]
-            if ent_category not in result_dict:
-                result_dict[ent_category] = 1
-            else:
-                result_dict[ent_category] += 1
+            result_dict[ent_category] = result_dict.get(ent_category, 0) + 1
     return result_dict
 
 
-def process_data(raw_text_dir, entities_dir, train_output, test_output, num_chunks=6, verbose=False):
-    """
-    Process raw text and entity data to create training and test datasets
+def create_training_data(
+    doc_chunks: Dict[int, str], 
+    entity_patterns: List[EntityPattern], 
+    verbose: bool = False
+) -> List[TrainingExample]:
+    """Create training data from document chunks and entity patterns"""
+    training_data = []
     
-    Args:
-        raw_text_dir (str): Directory containing raw text files
-        entities_dir (str): Directory containing entity JSON files
-        train_output (str): Path to save training data pickle file
-        test_output (str): Path to save test data pickle file
-        num_chunks (int): Number of chunks to divide the corpus into
-        verbose (bool): Whether to print verbose output
+    for chunk_id, chunk_text in doc_chunks.items():
+        chunk_entities = []
         
-    Returns:
-        tuple: (train_data, test_data)
-    """
+        for pattern in entity_patterns:
+            entity_text = pattern["pattern"]
+            entity_label = pattern["label"]
+            
+            # Find all occurrences of the entity in the chunk
+            for match in re.finditer(re.escape(entity_text), chunk_text, re.IGNORECASE):
+                start, end = match.span()
+                chunk_entities.append((start, end, entity_label))
+        
+        # Only add chunks that contain entities
+        if chunk_entities:
+            # Sort entities by start position
+            chunk_entities.sort(key=lambda x: x[0])
+            
+            # Add to training data
+            training_data.append((chunk_text, {"entities": chunk_entities}))
+            
+            if verbose and len(training_data) % 100 == 0:
+                print(f"Created {len(training_data)} training examples")
+    
+    return training_data
+
+
+def process_data(
+    raw_text_dir: Union[str, Path], 
+    entities_dir: Union[str, Path], 
+    train_output: Union[str, Path], 
+    test_output: Union[str, Path], 
+    num_chunks: int = 6, 
+    verbose: bool = False
+) -> Tuple[List[TrainingExample], List[TrainingExample]]:
+    """Process raw text and entity data to create training and test datasets"""
     # Read raw docs and entities
     docs = read_raw_docs(raw_text_dir, verbose=verbose)
     entities = read_json_docs(entities_dir, verbose=verbose)
@@ -195,18 +188,12 @@ def process_data(raw_text_dir, entities_dir, train_output, test_output, num_chun
     # Divide corpus into chunks
     doc_chunk_dict = divide_string_into_n_chunks(docs, num_chunks)
     
-    # TODO: This part is incomplete in the original script
-    # We need to create TRAIN_TEST_DATASET from doc_chunk_dict and ent_patterns_list
-    # For now, we'll assume it's a placeholder and create a dummy dataset
-    
-    # This is a placeholder - in a real implementation, you would create actual training data
-    # from the documents and entity patterns
-    train_test_dataset = []
+    # Create training data from chunks and entity patterns
+    train_test_dataset = create_training_data(doc_chunk_dict, ent_patterns_list, verbose)
     
     # If there's no data, return empty lists
     if not train_test_dataset:
-        print("Warning: No training data was created. This is likely because the original script was incomplete.")
-        print("You'll need to implement the logic to create the training dataset from the documents and entity patterns.")
+        print("Warning: No training data was created.")
         return [], []
     
     # Create a shuffled copy
@@ -230,8 +217,8 @@ def process_data(raw_text_dir, entities_dir, train_output, test_output, num_chun
         print(test_analysis)
     
     # Create output directories if they don't exist
-    os.makedirs(os.path.dirname(train_output) or '.', exist_ok=True)
-    os.makedirs(os.path.dirname(test_output) or '.', exist_ok=True)
+    Path(train_output).parent.mkdir(parents=True, exist_ok=True)
+    Path(test_output).parent.mkdir(parents=True, exist_ok=True)
     
     # Save train and test data to pickle files
     with open(train_output, 'wb') as train_file:
@@ -246,7 +233,7 @@ def process_data(raw_text_dir, entities_dir, train_output, test_output, num_chun
     return train_data, test_data
 
 
-def main():
+def main() -> None:
     """Main function to run the script"""
     parser = argparse.ArgumentParser(description="Feature engineering for training data")
     parser.add_argument("--raw-text", required=True, 

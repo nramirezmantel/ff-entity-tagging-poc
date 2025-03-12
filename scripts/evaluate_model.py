@@ -1,60 +1,34 @@
 """
-Runs evaluation on a trained model, 
-Or a trained model + matcher
+Evaluates a trained spaCy model on training and test data
 """
 import pickle
 import spacy
 import argparse
-import os
 import json
+from pathlib import Path
+from typing import Any, Dict, List, Tuple, Optional
 from spacy.training.example import Example
+from spacy.language import Language
 
 
-def load_data(file_path):
-    """
-    Load data from a pickle file
-    
-    Args:
-        file_path (str): Path to the pickle file
-        
-    Returns:
-        list: The loaded data
-    """
+def load_data(file_path: str) -> List[Tuple[str, Dict[str, Any]]]:
+    """Load data from a pickle file"""
     with open(file_path, "rb") as f:
         return pickle.load(f)
 
 
-def create_examples(model, data):
-    """
-    Create spaCy examples from data
-    
-    Args:
-        model: The spaCy model
-        data (list): List of (text, annotations) tuples
-        
-    Returns:
-        list: List of spaCy Example objects
-    """
-    examples = []
-    for text, annots in data:
-        doc = model.make_doc(text)
-        examples.append(Example.from_dict(doc, annots))
-    return examples
+def create_examples(model: Language, data: List[Tuple[str, Dict[str, Any]]]) -> List[Example]:
+    """Create spaCy examples from data"""
+    return [Example.from_dict(model.make_doc(text), annots) for text, annots in data]
 
 
-def evaluate_model(model_path, train_data_path, test_data_path, output_path=None):
-    """
-    Evaluate a trained spaCy model on train and test data
-    
-    Args:
-        model_path (str): Path to the trained model
-        train_data_path (str): Path to the training data pickle file
-        test_data_path (str): Path to the test data pickle file
-        output_path (str, optional): Path to save evaluation results
-        
-    Returns:
-        tuple: (train_performance_dict, test_performance_dict)
-    """
+def evaluate_model(
+    model_path: str, 
+    train_data_path: str, 
+    test_data_path: str, 
+    output_path: Optional[str] = None
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """Evaluate a trained spaCy model on train and test data"""
     # Load the model
     trained_model = spacy.load(model_path)
     
@@ -83,7 +57,7 @@ def evaluate_model(model_path, train_data_path, test_data_path, output_path=None
     
     # Save results if output path is provided
     if output_path:
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, 'w') as f:
             json.dump({
                 'train': train_performance_dict,
@@ -94,7 +68,7 @@ def evaluate_model(model_path, train_data_path, test_data_path, output_path=None
     return train_performance_dict, test_performance_dict
 
 
-def main():
+def main() -> None:
     """Main function to run the script"""
     parser = argparse.ArgumentParser(description="Evaluate a trained spaCy model")
     parser.add_argument("--model", default="output/model-best", 
@@ -106,7 +80,6 @@ def main():
     parser.add_argument("--output", help="Path to save evaluation results (optional)")
     
     args = parser.parse_args()
-    
     evaluate_model(args.model, args.train, args.test, args.output)
 
 

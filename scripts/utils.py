@@ -1,26 +1,21 @@
 """
-Utility functions for the entity tagging project
+Utility functions for visualizing model evaluation metrics
 """
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-import os
 import json
 import argparse
+from pathlib import Path
+from typing import Dict, Any, Optional, List
 
 
-def plot_metrics(data, title=None, save_path=None):
-    """
-    Plot model evaluation metrics
-    
-    Args:
-        data (dict): Model evaluation metrics dictionary
-        title (str, optional): Title for the plot
-        save_path (str, optional): Path to save the plot image
-        
-    Returns:
-        None
-    """
+def plot_metrics(
+    data: Dict[str, Any], 
+    title: Optional[str] = None, 
+    save_path: Optional[str] = None
+) -> None:
+    """Plot model evaluation metrics"""
     # Extract the overall metrics
     overall_metrics = {
         'p': data['ents_p'],
@@ -30,39 +25,36 @@ def plot_metrics(data, title=None, save_path=None):
 
     # Extract the entity-specific metrics
     entity_metrics = data['ents_per_type']
-
-    # Convert the data to a DataFrame for easier plotting
     entity_categories = list(entity_metrics.keys())
+    
+    # Extract metrics for each entity category
     entity_p = [entity_metrics[ent]['p'] for ent in entity_categories]
     entity_r = [entity_metrics[ent]['r'] for ent in entity_categories]
     entity_f = [entity_metrics[ent]['f'] for ent in entity_categories]
 
-    # Create a DataFrame for entity-specific metrics in long format
+    # Create DataFrames for plotting
     df_entity = pd.DataFrame({
-        'Entity Category': entity_categories * 3,  # Repeating the entity categories for each metric (p, r, f)
+        'Entity Category': entity_categories * 3,
         'Metric': ['p'] * len(entity_categories) + ['r'] * len(entity_categories) + ['f'] * len(entity_categories),
         'Value': entity_p + entity_r + entity_f
     })
 
-    # Create a DataFrame for overall metrics (one row for each metric)
     df_overall = pd.DataFrame({
         'Entity Category': ['Overall'] * 3,
         'Metric': ['p', 'r', 'f'],
         'Value': [overall_metrics['p'], overall_metrics['r'], overall_metrics['f']]
     })
 
-    # Concatenate the entity-specific and overall metrics
+    # Concatenate the DataFrames
     df_combined = pd.concat([df_entity, df_overall], ignore_index=True)
 
-    # Set up the plot
+    # Create the plot
     plt.figure(figsize=(12, 6))
     sns.set(style="whitegrid")
-
-    # Plot the bars
     sns.barplot(x="Entity Category", y="Value", hue="Metric", data=df_combined, palette="Set2")
 
     # Customize the plot
-    plot_title = title or "Overall vs Entity-Specific Metrics (p=precision, r=recall, f=f1 score) by Entity Category"
+    plot_title = title or "Overall vs Entity-Specific Metrics (p=precision, r=recall, f=f1 score)"
     plt.title(plot_title, fontsize=14)
     plt.xlabel("Entity Category", fontsize=12)
     plt.ylabel("Metric Value", fontsize=12)
@@ -72,7 +64,7 @@ def plot_metrics(data, title=None, save_path=None):
     
     # Save the plot if a path is provided
     if save_path:
-        os.makedirs(os.path.dirname(save_path) or '.', exist_ok=True)
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(save_path)
         print(f"Plot saved to {save_path}")
     
@@ -80,19 +72,13 @@ def plot_metrics(data, title=None, save_path=None):
     plt.show()
 
 
-def compare_metrics(train_data, test_data, title=None, save_path=None):
-    """
-    Compare and plot training and test metrics
-    
-    Args:
-        train_data (dict): Training evaluation metrics dictionary
-        test_data (dict): Test evaluation metrics dictionary
-        title (str, optional): Title for the plot
-        save_path (str, optional): Path to save the plot image
-        
-    Returns:
-        None
-    """
+def compare_metrics(
+    train_data: Dict[str, Any], 
+    test_data: Dict[str, Any], 
+    title: Optional[str] = None, 
+    save_path: Optional[str] = None
+) -> None:
+    """Compare and plot training and test metrics"""
     # Extract metrics
     metrics = {
         'Train Precision': train_data['ents_p'],
@@ -106,11 +92,9 @@ def compare_metrics(train_data, test_data, title=None, save_path=None):
     # Create DataFrame
     df = pd.DataFrame(list(metrics.items()), columns=['Metric', 'Value'])
     
-    # Set up the plot
+    # Create the plot
     plt.figure(figsize=(10, 6))
     sns.set(style="whitegrid")
-    
-    # Plot the bars
     ax = sns.barplot(x="Metric", y="Value", data=df, palette="Set2")
     
     # Add value labels on top of bars
@@ -127,7 +111,7 @@ def compare_metrics(train_data, test_data, title=None, save_path=None):
     
     # Save the plot if a path is provided
     if save_path:
-        os.makedirs(os.path.dirname(save_path) or '.', exist_ok=True)
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(save_path)
         print(f"Comparison plot saved to {save_path}")
     
@@ -135,7 +119,7 @@ def compare_metrics(train_data, test_data, title=None, save_path=None):
     plt.show()
 
 
-def main():
+def main() -> None:
     """Main function to run the script"""
     parser = argparse.ArgumentParser(description="Visualize model evaluation metrics")
     parser.add_argument("--input", required=True, 
@@ -160,10 +144,8 @@ def main():
         
         # Determine which is train and which is test
         if 'train' in data and 'test' in data:
-            # If the file contains both train and test metrics
             compare_metrics(data['train'], data['test'], args.title, args.output)
         elif 'train' in compare_data and 'test' in compare_data:
-            # If the comparison file contains both train and test metrics
             compare_metrics(compare_data['train'], compare_data['test'], args.title, args.output)
         else:
             # Assume the first file is train and the second is test
@@ -171,11 +153,9 @@ def main():
     else:
         # If only visualizing one set of metrics
         if 'train' in data and 'test' in data:
-            # If the file contains both train and test metrics
             print("File contains both train and test metrics. Visualizing test metrics.")
             plot_metrics(data['test'], args.title, args.output)
         else:
-            # Visualize the provided metrics
             plot_metrics(data, args.title, args.output)
 
 

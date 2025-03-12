@@ -1,22 +1,16 @@
 """
-Script for running inference with a trained spaCy model
+Runs inference with a trained spaCy model on text or files
 """
 import spacy
 import argparse
 import json
-import os
+from pathlib import Path
+from typing import Dict, List, Any, Optional
+from spacy.language import Language
 
 
-def load_model(model_path):
-    """
-    Load a trained spaCy model
-    
-    Args:
-        model_path (str): Path to the trained model
-        
-    Returns:
-        spacy.language.Language: The loaded spaCy model
-    """
+def load_model(model_path: str) -> Language:
+    """Load a trained spaCy model"""
     try:
         nlp = spacy.load(model_path)
         print(f"Model loaded from {model_path}")
@@ -26,28 +20,20 @@ def load_model(model_path):
         raise
 
 
-def process_text(nlp, text):
-    """
-    Process text with a spaCy model
-    
-    Args:
-        nlp (spacy.language.Language): The spaCy model
-        text (str): The text to process
-        
-    Returns:
-        dict: Dictionary containing the processed results
-    """
+def process_text(nlp: Language, text: str) -> Dict[str, Any]:
+    """Process text with a spaCy model"""
     doc = nlp(text)
     
     # Extract entities
-    entities = []
-    for ent in doc.ents:
-        entities.append({
+    entities = [
+        {
             "text": ent.text,
             "start": ent.start_char,
             "end": ent.end_char,
             "label": ent.label_
-        })
+        }
+        for ent in doc.ents
+    ]
     
     return {
         "text": text,
@@ -55,18 +41,12 @@ def process_text(nlp, text):
     }
 
 
-def process_file(nlp, input_path, output_path=None):
-    """
-    Process a text file with a spaCy model
-    
-    Args:
-        nlp (spacy.language.Language): The spaCy model
-        input_path (str): Path to the input text file
-        output_path (str, optional): Path to save the results
-        
-    Returns:
-        dict: Dictionary containing the processed results
-    """
+def process_file(
+    nlp: Language, 
+    input_path: str, 
+    output_path: Optional[str] = None
+) -> Dict[str, Any]:
+    """Process a text file with a spaCy model"""
     # Read the input file
     with open(input_path, 'r', encoding='utf-8') as f:
         text = f.read()
@@ -76,15 +56,16 @@ def process_file(nlp, input_path, output_path=None):
     
     # Save the results if output path is provided
     if output_path:
-        os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
-        with open(output_path, 'w', encoding='utf-8') as f:
+        output_file = Path(output_path)
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(results, f, indent=2)
         print(f"Results saved to {output_path}")
     
     return results
 
 
-def main():
+def main() -> None:
     """Main function to run the script"""
     parser = argparse.ArgumentParser(description="Run inference with a trained spaCy model")
     parser.add_argument("--model", default="output/model-best", 
@@ -109,8 +90,9 @@ def main():
         
         # Save the results if output path is provided
         if args.output:
-            os.makedirs(os.path.dirname(args.output) or '.', exist_ok=True)
-            with open(args.output, 'w', encoding='utf-8') as f:
+            output_file = Path(args.output)
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(results, f, indent=2)
             print(f"Results saved to {args.output}")
     
