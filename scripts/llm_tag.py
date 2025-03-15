@@ -19,6 +19,7 @@ if str(project_root) not in sys.path:
 try:
     from src.llm.runners.ee_openai_runner import ee_openai_runner, list_files_in_folder
     from src.llm.prompts.ic_mrc_arc import ic_mrc_arc_prompts
+    from src.llm.prompts.foundational import foundational_prompts
     from src.llm.utils.helpers import clean_json as llm_clean_json
 except ImportError as e:
     print(f"Warning: Some LLM modules could not be imported: {e}")
@@ -47,7 +48,7 @@ async def process_files_llm(input_folder: Union[str, Path], output_folder: Union
 
         try:
             # Use the ee_openai_runner to extract entities
-            responses = await ee_openai_runner(file_path, ic_mrc_arc_prompts)
+            responses = await ee_openai_runner(file_path, foundational_prompts)
             
             if not isinstance(responses, dict):
                 print("Responses are not an object")
