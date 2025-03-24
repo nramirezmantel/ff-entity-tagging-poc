@@ -73,10 +73,4 @@ foundational_prompts = {
   "reporting_entity": reporting_entity,
   "included_entities": included_entities,
   "company_identifiers": company_identifiers,
-#   "registered_addresses": registered_addresses,
-#   "phone_numbers": phone_numbers,
-#   "people_roles": people_roles,
-#   "reporting_period": reporting_period,
-#   "geographies": geographies,
-#   "currencies": currencies,
 }

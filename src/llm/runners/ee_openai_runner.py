@@ -35,8 +35,6 @@ def list_files_in_folder(root_folder: str):
 
 async def ee_openai_runner(file_path: str, prompts: dict) -> dict:
 
-
-    #prebuiltLayoutRunner removed for now, reading text files instead
     context = await read_txt_file(file_path)
     responses = {}
 
@@ -64,6 +62,7 @@ def main():
         base_name = Path(file_path).stem
         print(f"processing document: {file_path}")
 
+        print(foundational_prompts)
         responses = asyncio.run(ee_openai_runner(file_path, ic_mrc_arc_prompts))
         print(responses)
 

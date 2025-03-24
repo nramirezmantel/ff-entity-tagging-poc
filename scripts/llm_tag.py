@@ -48,7 +48,7 @@ async def process_files_llm(input_folder: Union[str, Path], output_folder: Union
 
         try:
             # Use the ee_openai_runner to extract entities
-            responses = await ee_openai_runner(file_path, foundational_prompts)
+            responses = await ee_openai_runner(file_path, ic_mrc_arc_prompts)
             
             if not isinstance(responses, dict):
                 print("Responses are not an object")
@@ -58,8 +58,7 @@ async def process_files_llm(input_folder: Union[str, Path], output_folder: Union
             cleaned_responses = llm_clean_json(responses)
             json_responses = json.dumps(cleaned_responses, indent=2)
 
-            timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-            output_file = output_path / f"response-{base_name}-{timestamp}.json"
+            output_file = output_path / f"{base_name}.json"
             
             output_file.write_text(json_responses, encoding="utf-8")
             print(f"Output file: {output_file}")
@@ -155,8 +154,8 @@ async def main_async(args: argparse.Namespace) -> None:
     # Step 2: Clean JSON files
     if args.clean:
         print(f"Processing files in {args.llm_output} for JSON cleaning")
-        print(f"Removing keys: {args.remove}")
-        clean_count = process_files_in_directory(args.llm_output, args.remove, args.clean_output)
+        # print(f"Removing keys: {args.remove}")
+        clean_count = process_files_in_directory(args.llm_output, args.clean_output)
         print(f"Successfully processed {clean_count} files for cleaning")
 
 
@@ -177,10 +176,10 @@ def main() -> None:
     # Clean arguments
     parser.add_argument("--clean", action="store_true",
                         help="Perform JSON cleaning")
-    parser.add_argument("--clean-output", default="data/processed/pre_processing/cleaned_llm_entities",
+    parser.add_argument("--clean_output", default="data/processed/pre_processing/cleaned_llm_entities",
                         help="Directory to save cleaned JSON files")
-    parser.add_argument("--remove", nargs='+', default=['dates', 'included entities'],
-                        help="Keys to remove from JSON files (default: 'dates' 'included entities')")
+    # parser.add_argument("--remove", nargs='+', default=['dates', 'included entities'],
+    #                     help="Keys to remove from JSON files (default: 'dates' 'included entities')")
     
     # All steps
     parser.add_argument("--all", action="store_true",

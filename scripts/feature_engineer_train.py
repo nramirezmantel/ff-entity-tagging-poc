@@ -240,9 +240,9 @@ def main() -> None:
                         help="Directory containing raw text files")
     parser.add_argument("--entities", required=True, 
                         help="Directory containing entity JSON files")
-    parser.add_argument("--train-output", default="TRAIN-ic-mrc-arc-large-batch.pkl", 
+    parser.add_argument("--train-output", default="TRAIN-mini.pkl", 
                         help="Path to save training data pickle file")
-    parser.add_argument("--test-output", default="TEST-ic-mrc-arc-large-batch.pkl", 
+    parser.add_argument("--test-output", default="TEST-mini.pkl", 
                         help="Path to save test data pickle file")
     parser.add_argument("--chunks", type=int, default=6, 
                         help="Number of chunks to divide the corpus into")
