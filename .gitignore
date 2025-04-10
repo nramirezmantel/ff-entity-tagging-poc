@@ -1,0 +1,68 @@
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Virtual environments
+venv/
+.env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Data files
+*.csv
+*.tsv
+*.txt
+*.json
+*.xlsx
+*.xls
+*.h5
+*.parquet
+*.feather
+*.orc
+*.msgpack
+*.pkl
+*.joblib
+*.db
+*.sqlite
+
+# Model files
+*.h5
+*.hdf5
+*.pb
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.ckpt
+
+# Model folders
+models/
+
+# Logs and checkpoints
+logs/
+*.log
+*.out
+*.err
+
+# Experiment tracking (MLflow, TensorBoard, etc.)
+mlruns/
+*.mlflow
+tensorboard/
+
+# Environment and dependency files
+.env
+*.conda
+Pipfile
+Pipfile.lock
+poetry.lock
+*.venv*
+
+# Docker
+*.dockerfile
+docker-compose.override.yml
+
+# VSCode & IDE specific
+.vscode/
+.idea/
+*.iml
